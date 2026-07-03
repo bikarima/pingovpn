@@ -158,7 +158,7 @@ class AccountScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: isFilled
                   ? Colors.white
-                  : Colors.white.withOpacity(0.15),
+                  : Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(AppRadius.full),
             ),
           );
@@ -195,9 +195,9 @@ class AccountScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.statusConnected.withOpacity(0.08),
+        color: AppColors.statusConnected.withValues(alpha: 0.08),
         border: Border.all(
-          color: AppColors.statusConnected.withOpacity(0.3),
+          color: AppColors.statusConnected.withValues(alpha: 0.3),
         ),
         borderRadius: BorderRadius.circular(AppRadius.lg),
       ),

@@ -230,7 +230,7 @@ class _BestLocationRow extends StatelessWidget {
         color: AppColors.surfaceCard,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(
-          color: AppColors.accentPrimary.withOpacity(0.2),
+          color: AppColors.accentPrimary.withValues(alpha: 0.2),
         ),
       ),
       child: Row(

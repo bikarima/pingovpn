@@ -51,7 +51,7 @@ class _ResetSettingsSheetState extends State<ResetSettingsSheet> {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: AppColors.accentPrimary.withOpacity(0.15),
+                      color: AppColors.accentPrimary.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -119,7 +119,7 @@ class _ResetSettingsSheetState extends State<ResetSettingsSheet> {
                   decoration: BoxDecoration(
                     color: _canConfirm
                         ? Colors.white
-                        : Colors.white.withOpacity(0.3),
+                        : Colors.white.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(AppRadius.full),
                   ),
                   alignment: Alignment.center,

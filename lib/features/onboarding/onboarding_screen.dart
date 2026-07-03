@@ -56,8 +56,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void _goToLogin() {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const LoginScreen(),
-        transitionsBuilder: (_, anim, __, child) {
+        pageBuilder: (_, _, _) => const LoginScreen(),
+        transitionsBuilder: (_, anim, _, child) {
           return FadeTransition(opacity: anim, child: child);
         },
         transitionDuration: const Duration(milliseconds: 300),
@@ -124,7 +124,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           decoration: BoxDecoration(
                             color: isActive
                                 ? AppColors.accentPrimary
-                                : Colors.white.withOpacity(0.3),
+                                : Colors.white.withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(999),
                           ),
                         );
@@ -224,7 +224,7 @@ class _OnboardingIllustration extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: iconColor.withOpacity(0.08),
+              color: iconColor.withValues(alpha: 0.08),
               width: 1,
             ),
           ),
@@ -236,7 +236,7 @@ class _OnboardingIllustration extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: iconColor.withOpacity(0.12),
+              color: iconColor.withValues(alpha: 0.12),
               width: 1,
             ),
           ),
@@ -247,8 +247,8 @@ class _OnboardingIllustration extends StatelessWidget {
           height: 140,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: iconColor.withOpacity(0.1),
-            border: Border.all(color: iconColor.withOpacity(0.3), width: 1),
+            color: iconColor.withValues(alpha: 0.1),
+            border: Border.all(color: iconColor.withValues(alpha: 0.3), width: 1),
           ),
           child: Icon(icon, size: 64, color: iconColor),
         ),

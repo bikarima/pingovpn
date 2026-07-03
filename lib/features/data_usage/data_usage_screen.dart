@@ -163,7 +163,6 @@ class _DataUsageScreenState extends State<DataUsageScreen> {
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final barWidth = constraints.maxWidth / data.length - 4;
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: List.generate(data.length, (i) {

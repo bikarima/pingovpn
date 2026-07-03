@@ -36,7 +36,8 @@ class AppColors {
   static const Color gradientVipPurple = Color(0xFFA855F7);
 
   // Glass
-  static Color get surfaceGlass => const Color(0xFF1A1A1E).withOpacity(0.6);
+  static Color get surfaceGlass =>
+      const Color(0xFF1A1A1E).withValues(alpha: 0.6);
 
   // Gradients
   static const LinearGradient gradientUpgrade = LinearGradient(
@@ -67,7 +68,7 @@ class AppColors {
   // Shadows & Glows
   static List<BoxShadow> get shadowCard => [
         BoxShadow(
-          color: Colors.black.withOpacity(0.4),
+          color: Colors.black.withValues(alpha: 0.4),
           blurRadius: 20,
           offset: const Offset(0, 4),
         ),
@@ -75,25 +76,25 @@ class AppColors {
 
   static List<BoxShadow> get glowConnected => [
         BoxShadow(
-          color: const Color(0xFF22C55E).withOpacity(0.5),
+          color: const Color(0xFF22C55E).withValues(alpha: 0.5),
           blurRadius: 40,
         ),
         BoxShadow(
-          color: const Color(0xFF22C55E).withOpacity(0.2),
+          color: const Color(0xFF22C55E).withValues(alpha: 0.2),
           blurRadius: 80,
         ),
       ];
 
   static List<BoxShadow> get glowConnecting => [
         BoxShadow(
-          color: const Color(0xFFF59E0B).withOpacity(0.6),
+          color: const Color(0xFFF59E0B).withValues(alpha: 0.6),
           blurRadius: 30,
         ),
       ];
 
   static List<BoxShadow> get glowAccent => [
         BoxShadow(
-          color: const Color(0xFF4A7DFF).withOpacity(0.4),
+          color: const Color(0xFF4A7DFF).withValues(alpha: 0.4),
           blurRadius: 24,
         ),
       ];

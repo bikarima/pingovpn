@@ -7,7 +7,7 @@ class VpnProvider extends ChangeNotifier {
   ServerModel? _selectedServer;
   Duration _connectionDuration = Duration.zero;
   Timer? _connectionTimer;
-  String _accentColor = '#4A7DFF';
+  final String _accentColor = '#4A7DFF';
 
   // Settings toggles
   bool _proxyMode = false;

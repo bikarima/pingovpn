@@ -17,9 +17,8 @@ class _LoginScreenState extends State<LoginScreen> {
   void _login() {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const MainNavScreen(),
-        transitionsBuilder: (_, anim, __, child) {
-          return SlideTransition(
+        pageBuilder: (_, _, _) => const MainNavScreen(),
+        transitionsBuilder: (_, anim, _, child) {          return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(1, 0),
               end: Offset.zero,
@@ -271,7 +270,7 @@ class _LoginScreenState extends State<LoginScreen> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               width: 1,
             ),
           ),
@@ -404,7 +403,7 @@ class _SocialButton extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.accentPrimary.withOpacity(0.15),
+                  color: AppColors.accentPrimary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(AppRadius.full),
                 ),
                 child: Text(

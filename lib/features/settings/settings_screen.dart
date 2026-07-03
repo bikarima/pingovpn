@@ -254,10 +254,10 @@ class SettingsScreen extends StatelessWidget {
         width: double.infinity,
         height: 52,
         decoration: BoxDecoration(
-          color: AppColors.statusError.withOpacity(0.1),
+          color: AppColors.statusError.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(
-              color: AppColors.statusError.withOpacity(0.3)),
+              color: AppColors.statusError.withValues(alpha: 0.3)),
         ),
         alignment: Alignment.center,
         child: Text(
