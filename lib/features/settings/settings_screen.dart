@@ -5,10 +5,13 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/providers/vpn_provider.dart';
 import '../../shared/widgets/app_icon_button.dart';
-import '../../shared/widgets/settings_row.dart';
+import '../../shared/widgets/toggle_switch.dart';
 import '../services/services_screen.dart';
 import '../referral/referral_screen.dart';
 import 'reset_settings_sheet.dart';
+import 'dialogs/dns_dialog.dart';
+import 'dialogs/port_dialog.dart';
+import 'dialogs/language_dialog.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -22,152 +25,135 @@ class SettingsScreen extends StatelessWidget {
           builder: (context, vpn, _) {
             return Column(
               children: [
-                _buildHeader(context),
+                _SettingsHeader(),
                 Expanded(
                   child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.horizontalPadding,
-                        vertical: AppSpacing.md),
+                      horizontal: AppSpacing.horizontalPadding,
+                      vertical: 8,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Group 1: Network
-                        _buildGroupLabel('Network'),
-                        _buildGroup([
-                          SettingsRow(
-                            icon: Icons.alt_route_rounded,
+                        // ── Group 1 ───────────────────────────
+                        _GroupCard(items: [
+                          _NavItem(
+                            icon: Icons.call_split_rounded,
                             title: 'Split Tunneling',
-                            type: SettingsRowType.navigation,
                             onTap: () {},
                           ),
-                          SettingsRow(
-                            icon: Icons.security_rounded,
+                          _NavItem(
+                            icon: Icons.shield_outlined,
                             title: 'Guardian',
-                            type: SettingsRowType.navigation,
                             onTap: () {},
                           ),
                         ]),
-                        const SizedBox(height: 20),
 
-                        // Group 2: Connection
-                        _buildGroupLabel('Connection'),
-                        _buildGroup([
-                          SettingsRow(
+                        const SizedBox(height: 16),
+
+                        // ── Group 2 ───────────────────────────
+                        _GroupCard(items: [
+                          _ToggleItem(
                             icon: Icons.swap_horiz_rounded,
                             title: 'Proxy Mode',
-                            type: SettingsRowType.toggle,
-                            toggleValue: vpn.proxyMode,
-                            onToggle: vpn.setProxyMode,
+                            value: vpn.proxyMode,
+                            onChanged: vpn.setProxyMode,
                           ),
-                          SettingsRow(
+                          _NavItem(
                             icon: Icons.wifi_tethering_rounded,
                             title: 'Share via HotSpot',
-                            type: SettingsRowType.navigation,
                             onTap: () {},
                           ),
-                          SettingsRow(
+                          _ValueItem(
                             icon: Icons.settings_ethernet_rounded,
                             title: 'SOCKS5 & HTTP Port',
-                            type: SettingsRowType.valueDisplay,
-                            displayValue: '1080',
-                            onTap: () {},
+                            value: vpn.socksPort.toString(),
+                            onTap: () => _showPortDialog(context, vpn),
                           ),
-                          SettingsRow(
-                            icon: Icons.dns_rounded,
-                            title: 'DNS',
-                            type: SettingsRowType.valueDisplay,
-                            displayValue: '1.1.1.1',
-                            onTap: () {},
-                          ),
-                          SettingsRow(
+                          _DnsItem(vpn: vpn),
+                          _ToggleItem(
                             icon: Icons.network_ping_rounded,
                             title: 'Auto Ping Servers',
-                            type: SettingsRowType.toggle,
-                            toggleValue: vpn.autoPingServers,
-                            onToggle: vpn.setAutoPing,
+                            value: vpn.autoPingServers,
+                            onChanged: vpn.setAutoPing,
                           ),
                         ]),
-                        const SizedBox(height: 20),
 
-                        // Group 3: Security
-                        _buildGroupLabel('Security'),
-                        _buildGroup([
-                          SettingsRow(
-                            icon: Icons.block_rounded,
-                            title: 'Ad & Malware Blocker',
-                            type: SettingsRowType.toggle,
-                            toggleValue: vpn.adBlocker,
-                            onToggle: vpn.setAdBlocker,
-                            subtitle: vpn.adBlocker
-                                ? '1,204 threats blocked this month'
-                                : null,
-                          ),
-                          SettingsRow(
-                            icon: Icons.route_rounded,
-                            title: 'Multi-hop Connection',
-                            type: SettingsRowType.toggle,
-                            toggleValue: vpn.multiHop,
-                            onToggle: vpn.setMultiHop,
-                          ),
-                        ]),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
 
-                        // Group 4: App
-                        _buildGroupLabel('App'),
-                        _buildGroup([
-                          SettingsRow(
+                        // ── Group 3 ───────────────────────────
+                        _GroupCard(items: [
+                          _ToggleItem(
                             icon: Icons.battery_saver_rounded,
                             title: 'Battery Optimization',
-                            type: SettingsRowType.toggle,
-                            toggleValue: vpn.batteryOptimization,
-                            onToggle: vpn.setBatteryOpt,
+                            value: vpn.batteryOptimization,
+                            onChanged: vpn.setBatteryOpt,
                           ),
-                          _ThemeColorRow(),
-                          SettingsRow(
-                            icon: Icons.apps_rounded,
-                            title: 'App Icon',
-                            type: SettingsRowType.navigation,
-                            onTap: () {},
-                          ),
-                        ]),
-                        const SizedBox(height: 20),
-
-                        // Group 5: General
-                        _buildGroupLabel('General'),
-                        _buildGroup([
-                          SettingsRow(
+                          _ValueItem(
                             icon: Icons.language_rounded,
                             title: 'Language',
-                            type: SettingsRowType.navigation,
-                            onTap: () {},
+                            value: vpn.language,
+                            onTap: () => _showLanguageDialog(context, vpn),
                           ),
-                          SettingsRow(
-                            icon: Icons.card_giftcard_rounded,
-                            title: 'Referral & Rewards',
-                            type: SettingsRowType.navigation,
-                            onTap: () => Navigator.push(context,
-                              MaterialPageRoute(builder: (_) => const ReferralScreen())),
-                          ),
-                          SettingsRow(
-                            icon: Icons.storage_rounded,
-                            title: 'My Services',
-                            type: SettingsRowType.navigation,
-                            onTap: () => Navigator.push(context,
-                              MaterialPageRoute(builder: (_) => const ServicesScreen())),
-                          ),
-                          SettingsRow(
+                          _NavItem(
                             icon: Icons.info_outline_rounded,
                             title: 'Version',
-                            type: SettingsRowType.valueDisplay,
-                            displayValue: '2.4.15',
+                            trailing: Text(
+                              '2.4.15',
+                              style: AppTextStyles.body.copyWith(
+                                color: AppColors.textSecondary,
+                                fontSize: 14,
+                              ),
+                            ),
                             onTap: () {},
                           ),
                         ]),
-                        const SizedBox(height: 20),
 
-                        // Reset button
-                        _buildResetButton(context),
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 16),
+
+                        // ── Group 4 ───────────────────────────
+                        _GroupCard(items: [
+                          _AdBlockerItem(vpn: vpn),
+                          _ToggleItem(
+                            icon: Icons.route_rounded,
+                            title: 'Multi-hop Connection',
+                            value: vpn.multiHop,
+                            onChanged: vpn.setMultiHop,
+                          ),
+                          _NavItem(
+                            icon: Icons.card_giftcard_rounded,
+                            title: 'Referral & Rewards',
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const ReferralScreen()),
+                            ),
+                          ),
+                          _NavItem(
+                            icon: Icons.confirmation_number_outlined,
+                            title: 'My Services',
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const ServicesScreen()),
+                            ),
+                          ),
+                        ]),
+
+                        const SizedBox(height: 24),
+
+                        // ── Reset ─────────────────────────────
+                        _ResetButton(
+                          onTap: () => showModalBottomSheet(
+                            context: context,
+                            backgroundColor: Colors.transparent,
+                            isScrollControlled: true,
+                            builder: (_) => const ResetSettingsSheet(),
+                          ),
+                        ),
+
+                        const SizedBox(height: 32),
                       ],
                     ),
                   ),
@@ -180,166 +166,392 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  void _showPortDialog(BuildContext context, VpnProvider vpn) {
+    showDialog(
+      context: context,
+      builder: (_) => PortDialog(
+        currentPort: vpn.socksPort,
+        onConfirm: vpn.setSocksPort,
+      ),
+    );
+  }
+
+  void _showLanguageDialog(BuildContext context, VpnProvider vpn) {
+    showDialog(
+      context: context,
+      builder: (_) => LanguageDialog(
+        current: vpn.language,
+        onSelect: vpn.setLanguage,
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Header
+// ─────────────────────────────────────────────────────────────────
+class _SettingsHeader extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.horizontalPadding, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.horizontalPadding, 12, AppSpacing.horizontalPadding, 4),
       child: Row(
         children: [
           AppIconButton(
             icon: const Icon(Icons.arrow_back_rounded,
-                size: 20, color: AppColors.textPrimary),
+                size: 22, color: AppColors.textPrimary),
             onTap: () => Navigator.pop(context),
           ),
           Expanded(
-            child: Text(
-              'SETTINGS',
-              style: AppTextStyles.h2,
-              textAlign: TextAlign.center,
-            ),
+            child: Text('SETTINGS', style: AppTextStyles.h2,
+                textAlign: TextAlign.center),
           ),
           AppIconButton(
-            icon: const Icon(Icons.headset_mic_rounded,
-                size: 20, color: AppColors.textSecondary),
+            icon: const Icon(Icons.headset_mic_outlined,
+                size: 22, color: AppColors.textSecondary),
             onTap: () {},
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildGroupLabel(String label) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(
-        label.toUpperCase(),
-        style: AppTextStyles.sectionLabel.copyWith(fontSize: 11),
-      ),
-    );
-  }
+// ─────────────────────────────────────────────────────────────────
+// Group Card — مثل اسکرین: هر گروه یه container با divider داخلی
+// ─────────────────────────────────────────────────────────────────
+class _GroupCard extends StatelessWidget {
+  final List<Widget> items;
+  const _GroupCard({required this.items});
 
-  Widget _buildGroup(List<Widget> children) {
+  @override
+  Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surfaceCard,
         borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       child: Column(
-        children: _buildWithDividers(children),
+        mainAxisSize: MainAxisSize.min,
+        children: () {
+          final result = <Widget>[];
+          for (var i = 0; i < items.length; i++) {
+            result.add(items[i]);
+            if (i < items.length - 1) {
+              result.add(const Divider(
+                height: 1,
+                thickness: 1,
+                color: AppColors.borderSubtle,
+                indent: 52,
+                endIndent: 0,
+              ));
+            }
+          }
+          return result;
+        }(),
       ),
-    );
-  }
-
-  List<Widget> _buildWithDividers(List<Widget> items) {
-    final result = <Widget>[];
-    for (var i = 0; i < items.length; i++) {
-      result.add(items[i]);
-      if (i < items.length - 1) {
-        result.add(Divider(
-          height: 1,
-          thickness: 1,
-          color: AppColors.borderSubtle,
-          indent: 16,
-          endIndent: 16,
-        ));
-      }
-    }
-    return result;
-  }
-
-  Widget _buildResetButton(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _showResetSheet(context),
-      child: Container(
-        width: double.infinity,
-        height: 52,
-        decoration: BoxDecoration(
-          color: AppColors.statusError.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(
-              color: AppColors.statusError.withValues(alpha: 0.3)),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          'Reset Settings',
-          style: AppTextStyles.body.copyWith(
-            color: AppColors.statusError,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showResetSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => const ResetSettingsSheet(),
     );
   }
 }
 
-class _ThemeColorRow extends StatefulWidget {
-  @override
-  State<_ThemeColorRow> createState() => _ThemeColorRowState();
-}
+// ─────────────────────────────────────────────────────────────────
+// Base row — ارتفاع ثابت 58px مثل اسکرین
+// ─────────────────────────────────────────────────────────────────
+class _BaseRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Widget trailing;
+  final VoidCallback? onTap;
 
-class _ThemeColorRowState extends State<_ThemeColorRow> {
-  int _selected = 0;
-
-  final List<Color> _colors = [
-    const Color(0xFF4A7DFF),
-    const Color(0xFFA855F7),
-    const Color(0xFF22C55E),
-    const Color(0xFFFF8A4C),
-  ];
+  const _BaseRow({
+    required this.icon,
+    required this.title,
+    required this.trailing,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            alignment: Alignment.center,
-            child: const Icon(Icons.palette_rounded,
-                size: 22, color: AppColors.textSecondary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Theme Color',
-              style: AppTextStyles.body.copyWith(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        height: 58,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              // آیکون با رنگ یکنواخت مثل اسکرین
+              SizedBox(
+                width: 28,
+                child: Icon(icon, size: 22, color: AppColors.textSecondary),
               ),
-            ),
-          ),
-          Row(
-            children: List.generate(_colors.length, (i) {
-              return GestureDetector(
-                onTap: () => setState(() => _selected = i),
-                child: Container(
-                  margin: const EdgeInsets.only(left: 8),
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: _colors[i],
-                    shape: BoxShape.circle,
-                    border: _selected == i
-                        ? Border.all(color: Colors.white, width: 2)
-                        : null,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTextStyles.body.copyWith(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary,
                   ),
                 ),
-              );
-            }),
+              ),
+              trailing,
+            ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Nav item — شورون راست
+// ─────────────────────────────────────────────────────────────────
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+
+  const _NavItem({
+    required this.icon,
+    required this.title,
+    this.trailing,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _BaseRow(
+      icon: icon,
+      title: title,
+      onTap: onTap,
+      trailing: trailing ??
+          const Icon(Icons.chevron_right,
+              size: 22, color: AppColors.textTertiary),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Toggle item
+// ─────────────────────────────────────────────────────────────────
+class _ToggleItem extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _ToggleItem({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _BaseRow(
+      icon: icon,
+      title: title,
+      onTap: () => onChanged(!value),
+      trailing: AppToggleSwitch(value: value, onChanged: onChanged),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Value item — مقدار + شورون
+// ─────────────────────────────────────────────────────────────────
+class _ValueItem extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+  final VoidCallback? onTap;
+
+  const _ValueItem({
+    required this.icon,
+    required this.title,
+    required this.value,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _BaseRow(
+      icon: icon,
+      title: title,
+      onTap: onTap,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: AppTextStyles.body.copyWith(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(Icons.chevron_right,
+              size: 20, color: AppColors.textTertiary),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// DNS item — dropdown مثل اسکرین
+// ─────────────────────────────────────────────────────────────────
+class _DnsItem extends StatelessWidget {
+  final VpnProvider vpn;
+  const _DnsItem({required this.vpn});
+
+  @override
+  Widget build(BuildContext context) {
+    return _BaseRow(
+      icon: Icons.dns_outlined,
+      title: 'DNS',
+      trailing: GestureDetector(
+        onTap: () => _showDnsPicker(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.bgSecondary,
+            borderRadius: BorderRadius.circular(AppRadius.full),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                vpn.dnsOption.label,
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.keyboard_arrow_down_rounded,
+                  size: 16, color: AppColors.textSecondary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDnsPicker(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => DnsDialog(
+        current: vpn.dnsOption,
+        onSelect: vpn.setDns,
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Ad Blocker — toggle + subtitle وقتی فعاله
+// ─────────────────────────────────────────────────────────────────
+class _AdBlockerItem extends StatelessWidget {
+  final VpnProvider vpn;
+  const _AdBlockerItem({required this.vpn});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => vpn.setAdBlocker(!vpn.adBlocker),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const SizedBox(
+                  width: 28,
+                  child: Icon(Icons.block_rounded,
+                      size: 22, color: AppColors.textSecondary),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Ad & Malware Blocker',
+                    style: AppTextStyles.body.copyWith(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                AppToggleSwitch(
+                  value: vpn.adBlocker,
+                  onChanged: vpn.setAdBlocker,
+                ),
+              ],
+            ),
+            if (vpn.adBlocker) ...[
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.only(left: 40),
+                child: Text(
+                  '1,204 threats blocked this month',
+                  style: AppTextStyles.caption.copyWith(
+                    fontSize: 11,
+                    color: AppColors.statusConnected,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Reset Button
+// ─────────────────────────────────────────────────────────────────
+class _ResetButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _ResetButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        height: 54,
+        decoration: BoxDecoration(
+          color: AppColors.statusError.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(
+              color: AppColors.statusError.withValues(alpha: 0.25)),
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.refresh_rounded,
+                size: 18, color: AppColors.statusError),
+            const SizedBox(width: 8),
+            Text(
+              'Reset Settings',
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.statusError,
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
