@@ -1,8 +1,10 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/providers/vpn_provider.dart';
 import '../../shared/widgets/app_icon_button.dart';
 
 enum _UsagePeriod { daily, weekly, monthly }
@@ -18,76 +20,81 @@ class _DataUsageScreenState extends State<DataUsageScreen> {
   _UsagePeriod _period = _UsagePeriod.weekly;
   int? _hoveredIndex;
 
-  final Map<_UsagePeriod, List<_UsageData>> _data = {
-    _UsagePeriod.daily: List.generate(
-      24,
-      (i) => _UsageData(
-        label: '${i}h',
-        value: math.Random(i * 7).nextDouble() * 3,
-      ),
-    ),
-    _UsagePeriod.weekly: [
-      _UsageData(label: 'Mon', value: 1.2),
-      _UsageData(label: 'Tue', value: 2.5),
-      _UsageData(label: 'Wed', value: 0.8),
-      _UsageData(label: 'Thu', value: 3.1),
-      _UsageData(label: 'Fri', value: 1.9),
-      _UsageData(label: 'Sat', value: 4.2),
-      _UsageData(label: 'Sun', value: 2.7),
-    ],
-    _UsagePeriod.monthly: List.generate(
-      30,
-      (i) => _UsageData(
-        label: '${i + 1}',
-        value: math.Random(i * 13).nextDouble() * 5,
-      ),
-    ),
-  };
-
-  List<_UsageData> get _currentData => _data[_period]!;
-
-  double get _totalUsage =>
-      _currentData.fold(0, (sum, d) => sum + d.value);
+  // در اپ واقعی این داده‌ها از API میاد
+  // فعلاً بر اساس اشتراک واقعی محاسبه می‌شه
+  List<_UsageData> _buildData(double totalGb) {
+    // تقسیم مصرف واقعی به بازه‌های زمانی (تقریبی)
+    final rng = math.Random(totalGb.toInt());
+    switch (_period) {
+      case _UsagePeriod.daily:
+        return List.generate(24, (i) => _UsageData(
+          label: '${i}h',
+          value: i < 12
+              ? (totalGb / 24) * (0.5 + rng.nextDouble())
+              : (totalGb / 24) * rng.nextDouble(),
+        ));
+      case _UsagePeriod.weekly:
+        final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        return List.generate(7, (i) => _UsageData(
+          label: days[i],
+          value: (totalGb / 7) * (0.5 + rng.nextDouble()),
+        ));
+      case _UsagePeriod.monthly:
+        return List.generate(30, (i) => _UsageData(
+          label: '${i + 1}',
+          value: (totalGb / 30) * (0.5 + rng.nextDouble()),
+        ));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(context),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.horizontalPadding,
-                  vertical: AppSpacing.md,
+    return Consumer<VpnProvider>(
+      builder: (context, vpn, _) {
+        final sub = vpn.subscription;
+        final used = sub?.dataUsedGb ?? 0.0;
+        final data = _buildData(used);
+        final totalUsage = data.fold(0.0, (s, d) => s + d.value);
+
+        return Scaffold(
+          backgroundColor: AppColors.bgPrimary,
+          body: SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(context),
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.horizontalPadding,
+                        vertical: AppSpacing.md),
+                    child: Column(
+                      children: [
+                        // ── Subscription overview card ─────────
+                        if (sub != null) _buildOverviewCard(sub.dataUsedGb, sub.dataLimitGb),
+                        const SizedBox(height: 20),
+                        _buildPeriodTabs(),
+                        const SizedBox(height: 20),
+                        _buildChart(data),
+                        const SizedBox(height: 20),
+                        _buildSummaryCard(totalUsage),
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  ),
                 ),
-                child: Column(
-                  children: [
-                    _buildPeriodTabs(),
-                    const SizedBox(height: 24),
-                    _buildChart(),
-                    const SizedBox(height: 24),
-                    _buildSummaryCard(),
-                    const SizedBox(height: 24),
-                    _buildBreakdown(),
-                  ],
-                ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.horizontalPadding,
-        vertical: 12,
-      ),
+          horizontal: AppSpacing.horizontalPadding, vertical: 12),
       child: Row(
         children: [
           AppIconButton(
@@ -96,13 +103,58 @@ class _DataUsageScreenState extends State<DataUsageScreen> {
             onTap: () => Navigator.pop(context),
           ),
           Expanded(
-            child: Text(
-              'DATA USAGE',
-              style: AppTextStyles.h2,
-              textAlign: TextAlign.center,
-            ),
+            child: Text('DATA USAGE',
+                style: AppTextStyles.h2, textAlign: TextAlign.center),
           ),
           const SizedBox(width: 40),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOverviewCard(double used, double limit) {
+    final pct = limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.accentPrimary.withValues(alpha: 0.15),
+            AppColors.accentPrimaryDark.withValues(alpha: 0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(
+            color: AppColors.accentPrimary.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.data_usage_rounded,
+                  size: 20, color: AppColors.accentPrimary),
+              const SizedBox(width: 10),
+              Text('${used.toStringAsFixed(2)} GB used',
+                  style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w700)),
+              const Spacer(),
+              Text('of ${limit.toStringAsFixed(0)} GB',
+                  style: AppTextStyles.caption),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.full),
+            child: LinearProgressIndicator(
+              value: pct,
+              backgroundColor: AppColors.surfaceCardHover,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                pct > 0.9 ? AppColors.statusError
+                    : pct > 0.7 ? AppColors.statusConnecting
+                    : AppColors.accentPrimary,
+              ),
+              minHeight: 8,
+            ),
+          ),
         ],
       ),
     );
@@ -132,9 +184,7 @@ class _DataUsageScreenState extends State<DataUsageScreen> {
                 child: Text(
                   p.name[0].toUpperCase() + p.name.substring(1),
                   style: AppTextStyles.caption.copyWith(
-                    color: isActive
-                        ? Colors.white
-                        : AppColors.textSecondary,
+                    color: isActive ? Colors.white : AppColors.textSecondary,
                     fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
                   ),
                 ),
@@ -146,11 +196,8 @@ class _DataUsageScreenState extends State<DataUsageScreen> {
     );
   }
 
-  Widget _buildChart() {
-    final data = _currentData;
+  Widget _buildChart(List<_UsageData> data) {
     final maxVal = data.map((d) => d.value).reduce(math.max);
-    final showAll = data.length <= 10;
-
     return Container(
       height: 200,
       padding: const EdgeInsets.fromLTRB(8, 16, 8, 0),
@@ -161,179 +208,111 @@ class _DataUsageScreenState extends State<DataUsageScreen> {
       child: Column(
         children: [
           Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: List.generate(data.length, (i) {
-                    final heightPercent = maxVal > 0
-                        ? (data[i].value / maxVal).clamp(0.02, 1.0)
-                        : 0.02;
-                    final isHovered = _hoveredIndex == i;
-
-                    return Expanded(
-                      child: GestureDetector(
-                        onTapDown: (_) =>
-                            setState(() => _hoveredIndex = i),
-                        onTapUp: (_) =>
-                            setState(() => _hoveredIndex = null),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 2),
-                          child: Stack(
-                            alignment: Alignment.topCenter,
-                            clipBehavior: Clip.none,
-                            children: [
-                              // Tooltip
-                              if (isHovered)
-                                Positioned(
-                                  top: -32,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.accentPrimary,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      '${data[i].value.toStringAsFixed(1)} GB',
-                                      style: AppTextStyles.caption.copyWith(
-                                        fontSize: 10,
-                                        color: Colors.white,
-                                      ),
-                                    ),
+            child: LayoutBuilder(builder: (context, constraints) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: List.generate(data.length, (i) {
+                  final h = maxVal > 0
+                      ? (data[i].value / maxVal).clamp(0.02, 1.0)
+                      : 0.02;
+                  final isHov = _hoveredIndex == i;
+                  return Expanded(
+                    child: GestureDetector(
+                      onTapDown: (_) => setState(() => _hoveredIndex = i),
+                      onTapUp: (_) => setState(() => _hoveredIndex = null),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: Stack(
+                          alignment: Alignment.topCenter,
+                          clipBehavior: Clip.none,
+                          children: [
+                            if (isHov)
+                              Positioned(
+                                top: -26,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.accentPrimary,
+                                    borderRadius: BorderRadius.circular(4),
                                   ),
-                                ),
-                              // Bar
-                              AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                height: constraints.maxHeight * heightPercent,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      AppColors.accentPrimary,
-                                      AppColors.accentPrimary
-                                          .withValues(alpha: 0.3),
-                                    ],
+                                  child: Text(
+                                    '${data[i].value.toStringAsFixed(2)}GB',
+                                    style: AppTextStyles.caption.copyWith(
+                                        fontSize: 10, color: Colors.white),
                                   ),
-                                  borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(4),
-                                  ),
-                                  boxShadow: isHovered
-                                      ? AppColors.glowAccent
-                                      : null,
                                 ),
                               ),
-                            ],
-                          ),
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              height: constraints.maxHeight * h,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    AppColors.accentPrimary,
+                                    AppColors.accentPrimary.withValues(alpha: 0.3),
+                                  ],
+                                ),
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(4)),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    );
-                  }),
-                );
-              },
+                    ),
+                  );
+                }),
+              );
+            }),
+          ),
+          const SizedBox(height: 6),
+          // X-axis labels
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(data.first.label,
+                    style: AppTextStyles.caption.copyWith(fontSize: 10)),
+                Text(data[data.length ~/ 2].label,
+                    style: AppTextStyles.caption.copyWith(fontSize: 10)),
+                Text(data.last.label,
+                    style: AppTextStyles.caption.copyWith(fontSize: 10)),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          // X-axis labels (show only some for dense data)
-          if (showAll)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Row(
-                children: data
-                    .map(
-                      (d) => Expanded(
-                        child: Text(
-                          d.label,
-                          style: AppTextStyles.caption.copyWith(fontSize: 10),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-            )
-          else
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(data.first.label,
-                      style: AppTextStyles.caption.copyWith(fontSize: 10)),
-                  Text(data[data.length ~/ 2].label,
-                      style: AppTextStyles.caption.copyWith(fontSize: 10)),
-                  Text(data.last.label,
-                      style: AppTextStyles.caption.copyWith(fontSize: 10)),
-                ],
-              ),
-            ),
           const SizedBox(height: 8),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryCard() {
+  Widget _buildSummaryCard(double totalUsage) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.accentPrimary.withValues(alpha: 0.15),
-            AppColors.accentPrimaryDark.withValues(alpha: 0.05),
-          ],
-        ),
+        color: AppColors.surfaceCard,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.accentPrimary.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.data_usage_rounded,
-              size: 28, color: AppColors.accentPrimary),
-          const SizedBox(width: 16),
+          const Icon(Icons.bar_chart_rounded,
+              size: 24, color: AppColors.accentPrimary),
+          const SizedBox(width: 14),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '${_totalUsage.toStringAsFixed(2)} GB',
-                style: AppTextStyles.statNumber.copyWith(fontSize: 22),
-              ),
-              Text(
-                'Total usage this ${_period.name}',
-                style: AppTextStyles.caption,
-              ),
+              Text('~${totalUsage.toStringAsFixed(2)} GB',
+                  style: AppTextStyles.statNumber.copyWith(fontSize: 20)),
+              Text('Estimated usage this ${_period.name}',
+                  style: AppTextStyles.caption),
             ],
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildBreakdown() {
-    final sorted = List.of(_currentData)
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final top5 = sorted.take(5).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('TOP USAGE', style: AppTextStyles.sectionLabel),
-        const SizedBox(height: 12),
-        ...top5.map(
-          (d) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _UsageRow(
-              label: d.label,
-              value: d.value,
-              maxValue: top5.first.value,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -344,61 +323,4 @@ class _UsageData {
   const _UsageData({required this.label, required this.value});
 }
 
-class _UsageRow extends StatelessWidget {
-  final String label;
-  final double value;
-  final double maxValue;
 
-  const _UsageRow({
-    required this.label,
-    required this.value,
-    required this.maxValue,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final percent = maxValue > 0 ? value / maxValue : 0.0;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 36,
-            child: Text(
-              label,
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.full),
-              child: LinearProgressIndicator(
-                value: percent,
-                backgroundColor: AppColors.surfaceCardHover,
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                    AppColors.accentPrimary),
-                minHeight: 6,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            '${value.toStringAsFixed(1)} GB',
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

@@ -9,14 +9,14 @@ class ServerCard extends StatelessWidget {
   final ServerModel server;
   final VpnConnectionStatus status;
   final String timer;
-  final VoidCallback onPowerTap;
+  final VoidCallback? onPowerTap;
 
   const ServerCard({
     super.key,
     required this.server,
     required this.status,
     required this.timer,
-    required this.onPowerTap,
+    this.onPowerTap,
   });
 
   @override
@@ -33,7 +33,7 @@ class ServerCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(child: _buildServerInfo()),
-          PowerButton(status: status, onTap: onPowerTap),
+          PowerButton(status: status, onTap: onPowerTap ?? () {}),
         ],
       ),
     );

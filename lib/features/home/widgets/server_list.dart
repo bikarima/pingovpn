@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/state/connection_state.dart';
+import '../../../core/providers/vpn_provider.dart';
 import '../../../shared/widgets/vip_badge.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
 
@@ -30,15 +32,32 @@ class _ServerListState extends State<ServerList> {
   final TextEditingController _searchCtrl = TextEditingController();
   String _query = '';
 
-  final List<String> _filters = ['All', 'Gaming', 'Streaming'];
+  final List<String> _filters = ['All', 'Free', 'VIP'];
+
+  // کشورهای گیمینگ (کم‌پینگ) و استریمینگ (پرمیوم)
+  static const _gamingCodes  = {'DE', 'NL', 'FR', 'GB', 'FI', 'TR'};    // ignore: unused_field
+  static const _streamingCodes = {'US', 'JP', 'CA', 'SG'};               // ignore: unused_field
 
   List<ServerModel> get _filteredServers {
     var list = widget.servers;
+
+    // فیلتر tab
+    switch (_selectedFilter) {
+      case 'Free':
+        list = list.where((s) => !s.isPremium).toList();
+        break;
+      case 'VIP':
+        list = list.where((s) => s.isPremium).toList();
+        break;
+    }
+
+    // فیلتر search
     if (_query.isNotEmpty) {
+      final q = _query.toLowerCase();
       list = list
           .where((s) =>
-              s.name.toLowerCase().contains(_query.toLowerCase()) ||
-              s.countryCode.toLowerCase().contains(_query.toLowerCase()))
+              s.name.toLowerCase().contains(q) ||
+              s.countryCode.toLowerCase().contains(q))
           .toList();
     }
     return list;
@@ -223,32 +242,40 @@ class _FilterTab extends StatelessWidget {
 class _BestLocationRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(
-          color: AppColors.accentPrimary.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.rocket_launch_rounded,
-              size: 20, color: AppColors.accentPrimary),
-          const SizedBox(width: 12),
-          Text(
-            'Best Location',
-            style: AppTextStyles.body.copyWith(
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
+    final vpn = context.read<VpnProvider>();
+    return GestureDetector(
+      onTap: () async {
+        try {
+          final best = await vpn.getBestServer();
+          if (context.mounted && best != null) vpn.selectServer(best);
+        } catch (_) {}
+      },
+      child: Container(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(
+            color: AppColors.accentPrimary.withValues(alpha: 0.2),
           ),
-          const Spacer(),
-          const Icon(Icons.chevron_right,
-              color: AppColors.textTertiary),
-        ],
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.rocket_launch_rounded,
+                size: 20, color: AppColors.accentPrimary),
+            const SizedBox(width: 12),
+            Text(
+              'Best Location',
+              style: AppTextStyles.body.copyWith(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const Spacer(),
+            const Icon(Icons.chevron_right, color: AppColors.textTertiary),
+          ],
+        ),
       ),
     );
   }

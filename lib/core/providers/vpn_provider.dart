@@ -56,7 +56,19 @@ class VpnProvider extends ChangeNotifier {
   ServerModel? get selectedServer => _selectedServer;
   Duration get connectionDuration => _connectionDuration;
   List<ServerModel> get servers => _servers;
-  List<ServerModel> get recentServers => _servers.take(4).toList();
+  // ── Recent servers tracking ───────────────────────────────
+  final List<ServerModel> _recentServers = [];
+
+  List<ServerModel> get recentServers {
+    if (_recentServers.isEmpty) return _servers.take(4).toList();
+    return _recentServers.take(4).toList();
+  }
+
+  void _trackRecentServer(ServerModel server) {
+    _recentServers.removeWhere((s) => s.id == server.id);
+    _recentServers.insert(0, server);
+    if (_recentServers.length > 10) _recentServers.removeLast();
+  }
   bool get serversLoading => _serversLoading;
   String? get serversError => _serversError;
   SubscriptionModel? get subscription => _subscription;
@@ -145,6 +157,7 @@ class VpnProvider extends ChangeNotifier {
     _status = VpnConnectionStatus.connected;
     _connectionDuration = Duration.zero;
     _sessionStartedAt = DateTime.now().toUtc();
+    _trackRecentServer(_selectedServer!);
     _startConnectionTimer();
     _startUsageTimer();
     notifyListeners();
@@ -222,6 +235,14 @@ class VpnProvider extends ChangeNotifier {
     if (_status == VpnConnectionStatus.connected) _disconnect();
     _selectedServer = server;
     notifyListeners();
+  }
+
+  Future<ServerModel?> getBestServer() async {
+    try {
+      return await ApiService.getBestServer();
+    } catch (_) {
+      return null;
+    }
   }
 
   void setDeviceId(String id) {

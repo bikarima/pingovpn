@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_spacing.dart';
@@ -13,8 +14,23 @@ import 'dialogs/dns_dialog.dart';
 import 'dialogs/port_dialog.dart';
 import 'dialogs/language_dialog.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  String _version = '';
+
+  @override
+  void initState() {
+    super.initState();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) setState(() => _version = info.version);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +116,7 @@ class SettingsScreen extends StatelessWidget {
                             icon: Icons.info_outline_rounded,
                             title: 'Version',
                             trailing: Text(
-                              '2.4.15',
+                              _version.isEmpty ? '...' : _version,
                               style: AppTextStyles.body.copyWith(
                                 color: AppColors.textSecondary,
                                 fontSize: 14,

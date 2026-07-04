@@ -6,27 +6,22 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
 
-    <!-- ── VPN ───────────────────────────────────────────────────── -->
+    <!-- ── VPN (برای فاز بعدی — Xray core integration) ─────────── -->
     <uses-permission android:name="android.permission.BIND_VPN_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
 
     <!-- ── Notifications (Android 13+) ──────────────────────────── -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <!-- ── Storage (برای لاگ و کش) ──────────────────────────────── -->
+    <!-- ── Wake lock ─────────────────────────────────────────────── -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- ── Storage (کش و لاگ، API 28 به پایین) ──────────────────── -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29" />
-
-    <!-- ── Wake lock (نگه داشتن اتصال در پس‌زمینه) ─────────────── -->
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-
-    <!-- ── Device info ────────────────────────────────────────────  -->
-    <uses-permission android:name="android.permission.READ_PHONE_STATE"
-        android:maxSdkVersion="28" />
 
     <application
         android:label="Pingo VPN"
@@ -56,33 +51,7 @@
             </intent-filter>
         </activity>
 
-        <!-- ── VPN Service ────────────────────────────────────────── -->
-        <service
-            android:name=".PingoVpnService"
-            android:exported="false"
-            android:permission="android.permission.BIND_VPN_SERVICE"
-            android:foregroundServiceType="connectedDevice">
-            <intent-filter>
-                <action android:name="android.net.VpnService" />
-            </intent-filter>
-        </service>
-
-        <!-- ── Foreground service (برای نوتیف اتصال) ────────────── -->
-        <service
-            android:name=".PingoForegroundService"
-            android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
-
-        <!-- ── Boot receiver (اتصال خودکار بعد از ریبوت) ─────────── -->
-        <receiver
-            android:name=".BootReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
-
-        <!-- ── Flutter embedding ──────────────────────────────────── -->
+        <!-- Flutter embedding -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
