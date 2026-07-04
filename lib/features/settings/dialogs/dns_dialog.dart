@@ -158,14 +158,12 @@ class _DnsOption extends StatelessWidget {
                         : AppColors.textSecondary,
                   ),
                 ),
-                if (option != DnsOption.system &&
-                    option != DnsOption.custom)
+                if (option != DnsOption.system)
                   Text(
                     option == DnsOption.cloudflare
                         ? 'Cloudflare · Fast & Private'
                         : 'Google · Reliable',
-                    style: AppTextStyles.caption
-                        .copyWith(fontSize: 11),
+                    style: AppTextStyles.caption.copyWith(fontSize: 11),
                   ),
               ],
             ),

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/providers/auth_provider.dart';
+import '../../core/providers/vpn_provider.dart';
 import '../../shared/widgets/app_icon_button.dart';
+import '../../shared/widgets/skeleton_loader.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
@@ -16,22 +20,29 @@ class AccountScreen extends StatelessWidget {
           children: [
             _buildHeader(context),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.horizontalPadding,
-                    vertical: AppSpacing.md),
-                child: Column(
-                  children: [
-                    _buildServiceCard(),
-                    const SizedBox(height: 16),
-                    _buildShowAllServices(),
-                    const SizedBox(height: 16),
-                    _buildInfoBox(),
-                    const SizedBox(height: 16),
-                    _buildPrivacyReport(),
-                    const SizedBox(height: 40),
-                  ],
-                ),
+              child: Consumer<VpnProvider>(
+                builder: (context, vpn, _) {
+                  if (vpn.subscriptionLoading) {
+                    return _buildSkeleton();
+                  }
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.horizontalPadding,
+                        vertical: AppSpacing.md),
+                    child: Column(
+                      children: [
+                        _buildServiceCard(context, vpn),
+                        const SizedBox(height: 16),
+                        _buildShowAllServices(),
+                        const SizedBox(height: 16),
+                        _buildInfoBox(vpn),
+                        const SizedBox(height: 16),
+                        _buildPrivacyReport(),
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -41,6 +52,7 @@ class AccountScreen extends StatelessWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final auth = context.read<AuthProvider>();
     return Padding(
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.horizontalPadding, vertical: 12),
@@ -52,23 +64,49 @@ class AccountScreen extends StatelessWidget {
             onTap: () => Navigator.pop(context),
           ),
           Expanded(
-            child: Text(
-              'ACCOUNT',
-              style: AppTextStyles.h2,
-              textAlign: TextAlign.center,
-            ),
+            child: Text('ACCOUNT',
+                style: AppTextStyles.h2, textAlign: TextAlign.center),
           ),
           AppIconButton(
             icon: const Icon(Icons.logout_rounded,
                 size: 20, color: AppColors.textSecondary),
-            onTap: () {},
+            onTap: () => _confirmLogout(context, auth),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildServiceCard() {
+  Future<void> _confirmLogout(BuildContext context, AuthProvider auth) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceCard,
+        title: Text('Logout?',
+            style: AppTextStyles.h3.copyWith(fontSize: 18)),
+        content: Text('You will need to login again.',
+            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel',
+                style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Logout',
+                style: AppTextStyles.body.copyWith(color: AppColors.statusError)),
+          ),
+        ],
+      ),
+    );
+    if (ok == true && context.mounted) {
+      await auth.logout();
+    }
+  }
+
+  Widget _buildServiceCard(BuildContext context, VpnProvider vpn) {
+    final sub = vpn.subscription;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -84,10 +122,11 @@ class AccountScreen extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Current Service', style: AppTextStyles.caption),
+                  Text('Current Service',
+                      style: AppTextStyles.caption),
                   const SizedBox(height: 2),
                   Text(
-                    'hXWsN4Kg',
+                    sub?.planName ?? 'No Plan',
                     style: AppTextStyles.monoLarge,
                   ),
                 ],
@@ -99,43 +138,97 @@ class AccountScreen extends StatelessWidget {
                   gradient: AppColors.gradientUpgrade,
                   borderRadius: BorderRadius.circular(AppRadius.full),
                 ),
-                child: Text(
-                  'Upgrade',
-                  style: AppTextStyles.caption.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                child: Text('Upgrade',
+                    style: AppTextStyles.caption.copyWith(
+                        color: Colors.white, fontWeight: FontWeight.w700)),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          Text('100%', style: AppTextStyles.percentLarge),
-          const SizedBox(height: 8),
-          _buildSegmentedProgress(1.0),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _StatMiniCard(
-                  value: '30 Days',
-                  label: 'Validity',
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _StatMiniCard(
-                  value: '0/2 Users',
-                  label: 'Users Connected',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _VipDataCard(),
+          if (sub == null)
+            _NoSubscriptionBanner(onRedeemTap: () => _showRedeemDialog(context))
+          else ...[
+            Text(
+              '${sub.dataUsagePercent.toStringAsFixed(0)}%',
+              style: AppTextStyles.percentLarge,
+            ),
+            const SizedBox(height: 8),
+            _buildSegmentedProgress(sub.dataUsagePercent / 100),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                    child: _StatMiniCard(
+                        value: sub.validityLabel, label: 'Validity')),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: _StatMiniCard(
+                        value: '0/${sub.maxDevices} Users',
+                        label: 'Users Connected')),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _VipDataCard(
+              used: sub.dataUsedGb,
+              total: sub.dataLimitGb,
+              percent: sub.dataUsagePercent / 100,
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  Future<void> _showRedeemDialog(BuildContext context) async {
+    final ctrl = TextEditingController();
+    final auth = context.read<AuthProvider>();
+    final vpn  = context.read<VpnProvider>();
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceCard,
+        title: Text('Redeem License',
+            style: AppTextStyles.h3.copyWith(fontSize: 18)),
+        content: TextField(
+          controller: ctrl,
+          style: AppTextStyles.body,
+          decoration: InputDecoration(
+            hintText: 'Enter license code',
+            hintStyle: AppTextStyles.caption,
+            filled: true,
+            fillColor: AppColors.bgSecondary,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel',
+                style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentPrimary,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.full)),
+            ),
+            onPressed: () async {
+              final result = await auth.redeemLicense(ctrl.text);
+              if (result != null && ctx.mounted) {
+                Navigator.pop(ctx);
+                await vpn.loadSubscription();
+              }
+            },
+            child: const Text('Redeem'),
+          ),
+        ],
+      ),
+    );
+    ctrl.dispose();
   }
 
   Widget _buildSegmentedProgress(double percent) {
@@ -150,13 +243,12 @@ class AccountScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(totalBars, (i) {
-          final isFilled = i < filledBars;
           return Container(
             margin: const EdgeInsets.symmetric(horizontal: 1.5),
             width: 4,
             height: 32,
             decoration: BoxDecoration(
-              color: isFilled
+              color: i < filledBars
                   ? Colors.white
                   : Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(AppRadius.full),
@@ -180,10 +272,8 @@ class AccountScreen extends StatelessWidget {
           const Icon(Icons.confirmation_number_outlined,
               size: 20, color: AppColors.textSecondary),
           const SizedBox(width: 12),
-          Text(
-            'Show all services',
-            style: AppTextStyles.body.copyWith(fontSize: 15),
-          ),
+          Text('Show all services',
+              style: AppTextStyles.body.copyWith(fontSize: 15)),
           const Spacer(),
           const Icon(Icons.chevron_right, color: AppColors.textTertiary),
         ],
@@ -191,47 +281,37 @@ class AccountScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoBox() {
+  Widget _buildInfoBox(VpnProvider vpn) {
+    final sub = vpn.subscription;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.statusConnected.withValues(alpha: 0.08),
         border: Border.all(
-          color: AppColors.statusConnected.withValues(alpha: 0.3),
-        ),
+            color: AppColors.statusConnected.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       child: RichText(
         text: TextSpan(
           style: AppTextStyles.body.copyWith(
-            fontSize: 13,
-            color: AppColors.textSecondary,
-            height: 1.6,
-          ),
+              fontSize: 13, color: AppColors.textSecondary, height: 1.6),
           children: [
             TextSpan(
-              text: '∞ ',
+              text: sub != null ? '${sub.daysRemaining} days ' : '0 days ',
               style: AppTextStyles.body.copyWith(
-                fontSize: 13,
-                color: AppColors.statusConnected,
-                fontWeight: FontWeight.w700,
-              ),
+                  fontSize: 13,
+                  color: AppColors.statusConnected,
+                  fontWeight: FontWeight.w700),
             ),
-            const TextSpan(
-              text:
-                  'Unlimited bandwidth available. Your subscription renews in 30 days.\n',
-            ),
+            const TextSpan(text: 'remaining in your subscription.\n'),
             TextSpan(
-              text: '2 ',
+              text: '${sub?.maxDevices ?? 0} ',
               style: AppTextStyles.body.copyWith(
-                fontSize: 13,
-                color: AppColors.statusConnected,
-                fontWeight: FontWeight.w700,
-              ),
+                  fontSize: 13,
+                  color: AppColors.statusConnected,
+                  fontWeight: FontWeight.w700),
             ),
-            const TextSpan(
-              text: 'simultaneous device connections allowed.',
-            ),
+            const TextSpan(text: 'simultaneous device connections allowed.'),
           ],
         ),
       ),
@@ -253,32 +333,82 @@ class AccountScreen extends StatelessWidget {
               const Icon(Icons.shield_rounded,
                   size: 18, color: AppColors.accentPrimary),
               const SizedBox(width: 8),
-              Text(
-                'Privacy Report',
-                style: AppTextStyles.body.copyWith(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              Text('Privacy Report',
+                  style: AppTextStyles.body
+                      .copyWith(fontSize: 15, fontWeight: FontWeight.w700)),
             ],
           ),
           const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
-                child: _StatMiniCard(
-                  value: '142 times',
-                  label: 'IP Hidden',
-                ),
-              ),
+                  child: _StatMiniCard(value: '142 times', label: 'IP Hidden')),
               const SizedBox(width: 12),
               Expanded(
-                child: _StatMiniCard(
-                  value: '2.3 TB',
-                  label: 'Data Secured',
-                ),
-              ),
+                  child: _StatMiniCard(value: '2.3 TB', label: 'Data Secured')),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSkeleton() {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.horizontalPadding),
+      child: Column(
+        children: [
+          SkeletonLoader(
+              width: double.infinity, height: 200, borderRadius: AppRadius.xl),
+          const SizedBox(height: 16),
+          SkeletonLoader(
+              width: double.infinity, height: 56, borderRadius: AppRadius.lg),
+          const SizedBox(height: 16),
+          SkeletonLoader(
+              width: double.infinity, height: 100, borderRadius: AppRadius.lg),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Sub-widgets ─────────────────────────────────────────────
+
+class _NoSubscriptionBanner extends StatelessWidget {
+  final VoidCallback onRedeemTap;
+  const _NoSubscriptionBanner({required this.onRedeemTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.accentPrimary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+            color: AppColors.accentPrimary.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline_rounded,
+              color: AppColors.accentPrimary, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text('No active subscription',
+                style: AppTextStyles.body.copyWith(fontSize: 14)),
+          ),
+          GestureDetector(
+            onTap: onRedeemTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.accentPrimary,
+                borderRadius: BorderRadius.circular(AppRadius.full),
+              ),
+              child: Text('Redeem',
+                  style: AppTextStyles.caption.copyWith(
+                      color: Colors.white, fontWeight: FontWeight.w700)),
+            ),
           ),
         ],
       ),
@@ -289,7 +419,6 @@ class AccountScreen extends StatelessWidget {
 class _StatMiniCard extends StatelessWidget {
   final String value;
   final String label;
-
   const _StatMiniCard({required this.value, required this.label});
 
   @override
@@ -313,6 +442,12 @@ class _StatMiniCard extends StatelessWidget {
 }
 
 class _VipDataCard extends StatelessWidget {
+  final double used;
+  final double total;
+  final double percent;
+  const _VipDataCard(
+      {required this.used, required this.total, required this.percent});
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -326,7 +461,8 @@ class _VipDataCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text('0GB/3GB', style: AppTextStyles.statNumber),
+              Text('${used.toStringAsFixed(1)}GB / ${total.toStringAsFixed(0)}GB',
+                  style: AppTextStyles.statNumber.copyWith(fontSize: 15)),
               const Spacer(),
               Text('VIP Data Used', style: AppTextStyles.caption),
             ],
@@ -335,7 +471,7 @@ class _VipDataCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.full),
             child: LinearProgressIndicator(
-              value: 0.0,
+              value: percent.clamp(0.0, 1.0),
               backgroundColor: AppColors.surfaceCardHover,
               valueColor: const AlwaysStoppedAnimation<Color>(
                   AppColors.accentPrimary),
@@ -347,3 +483,5 @@ class _VipDataCard extends StatelessWidget {
     );
   }
 }
+
+
