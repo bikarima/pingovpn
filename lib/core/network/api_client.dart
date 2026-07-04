@@ -13,14 +13,16 @@ class ApiClient {
         baseUrl: ApiConstants.baseUrl,
         connectTimeout: ApiConstants.connectTimeout,
         receiveTimeout: ApiConstants.receiveTimeout,
+        sendTimeout: ApiConstants.connectTimeout,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
+        validateStatus: (status) => status != null && status < 500,
       ),
     );
 
-    // Auth interceptor — اضافه کردن Bearer token
+    // Auth interceptor
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -31,17 +33,16 @@ class ApiClient {
           handler.next(options);
         },
         onError: (error, handler) async {
-          // 401 → refresh token
           if (error.response?.statusCode == 401) {
             final refreshed = await _tryRefresh();
             if (refreshed) {
-              // retry اصلی request
               final token = await TokenStorage.getAccessToken();
               error.requestOptions.headers['Authorization'] = 'Bearer $token';
-              final retryResp = await _dio.fetch(error.requestOptions);
-              return handler.resolve(retryResp);
+              try {
+                final retryResp = await _dio.fetch(error.requestOptions);
+                return handler.resolve(retryResp);
+              } catch (_) {}
             }
-            // refresh هم fail شد → logout
             await TokenStorage.clear();
           }
           handler.next(error);
@@ -49,7 +50,7 @@ class ApiClient {
       ),
     );
 
-    // Logger فقط در debug
+    // Logger
     _dio.interceptors.add(
       PrettyDioLogger(
         requestHeader: false,
@@ -57,6 +58,7 @@ class ApiClient {
         responseBody: true,
         error: true,
         compact: true,
+        maxWidth: 120,
       ),
     );
   }
@@ -71,10 +73,14 @@ class ApiClient {
   Future<bool> _tryRefresh() async {
     try {
       final refresh = await TokenStorage.getRefreshToken();
-      if (refresh == null) return false;
+      if (refresh == null || refresh.isEmpty) return false;
 
-      final resp = await Dio().post(
-        '${ApiConstants.baseUrl}${ApiConstants.refreshToken}',
+      final resp = await Dio(BaseOptions(
+        baseUrl: ApiConstants.baseUrl,
+        connectTimeout: ApiConstants.connectTimeout,
+        receiveTimeout: ApiConstants.receiveTimeout,
+      )).post(
+        ApiConstants.refreshToken,
         data: {'refresh_token': refresh},
       );
       if (resp.statusCode == 200) {

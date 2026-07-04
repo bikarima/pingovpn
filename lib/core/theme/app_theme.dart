@@ -5,7 +5,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 class AppTheme {
-  static ThemeData get dark => ThemeData(
+  static ThemeData get dark {
+    // غیر فعال کردن دانلود فونت از اینترنت
+    // فونت‌ها از system یا fallback استفاده می‌کنن
+    GoogleFonts.config.allowRuntimeFetching = false;
+
+    return ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: AppColors.bgPrimary,
         colorScheme: const ColorScheme.dark(
@@ -33,4 +38,5 @@ class AppTheme {
           },
         ),
       );
+  }
 }
