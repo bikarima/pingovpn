@@ -6,9 +6,8 @@ import 'app_colors.dart';
 
 class AppTheme {
   static ThemeData get dark {
-    // غیر فعال کردن دانلود فونت از اینترنت
-    // فونت‌ها از system یا fallback استفاده می‌کنن
-    GoogleFonts.config.allowRuntimeFetching = false;
+    // اجازه دانلود فونت از google fonts
+    GoogleFonts.config.allowRuntimeFetching = true;
 
     return ThemeData(
         brightness: Brightness.dark,

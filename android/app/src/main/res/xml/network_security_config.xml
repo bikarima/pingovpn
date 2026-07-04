@@ -1,17 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
 
-    <!--
-        اجازه HTTP به سرور خودمون (تا وقتی SSL نداریم)
-        بعد از اضافه کردن HTTPS این رو حذف کن
-    -->
+    <!-- HTTP به سرور خودمون مجازه -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">83.228.229.103</domain>
     </domain-config>
 
-    <!--
-        بقیه ترافیک فقط HTTPS مجازه
-    -->
+    <!-- HTTPS به همه جا مجازه (Google Fonts و غیره) -->
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />

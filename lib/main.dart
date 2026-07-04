@@ -10,8 +10,8 @@ import 'app_router.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // جلوگیری از دانلود فونت در runtime — از cache یا system استفاده می‌کنه
-  GoogleFonts.config.allowRuntimeFetching = false;
+  // اجازه دانلود فونت از google fonts
+  GoogleFonts.config.allowRuntimeFetching = true;
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
