@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
 
-    <!-- HTTP به سرور خودمون مجازه -->
+    <!-- HTTP به سرور خودمون روی هر port مجازه -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">83.228.229.103</domain>
     </domain-config>
 
-    <!-- HTTPS به همه جا مجازه (Google Fonts و غیره) -->
+    <!-- بقیه فقط HTTPS -->
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />

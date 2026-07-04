@@ -1,6 +1,6 @@
 class ApiConstants {
-  // آدرس سرور — بعداً با دامین واقعی جایگزین کن
-  static const String baseUrl = 'http://83.228.229.103';
+  // مستقیم به uvicorn بدون nginx (برای رفع مشکل emulator)
+  static const String baseUrl = 'http://83.228.229.103:8000';
   static const String apiPrefix = '/api/v1';
 
   // Endpoints
